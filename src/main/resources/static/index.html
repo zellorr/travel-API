@@ -1,0 +1,308 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Travel Booking System — Dashboard</title>
+
+    <!-- Optional icons (can be removed if offline) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Top header / stats -->
+<header class="app-header">
+    <div class="container header-inner">
+        <div class="brand">
+            <div class="logo">✈</div>
+            <div>
+                <h1>Travel Booking System</h1>
+                <div class="subtitle">Manage customers, flights & hotels — API-first UI</div>
+            </div>
+        </div>
+
+        <div class="top-stats" role="region" aria-label="Dashboard statistics">
+            <div class="stat">
+                <div class="stat-value" id="statTotalCustomers">0</div>
+                <div class="stat-label">Customers</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="statTotalBookings">0</div>
+                <div class="stat-label">Bookings</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="statRevenue">$0</div>
+                <div class="stat-label">Revenue</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="statFlights">0</div>
+                <div class="stat-label">Flights</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Navigation / pages -->
+<nav class="main-nav" role="navigation" aria-label="Main navigation">
+    <div class="container nav-inner">
+        <a href="#customers" class="nav-link" data-tab="customers">Customers</a>
+        <a href="#bookings" class="nav-link" data-tab="bookings">Bookings</a>
+        <a href="#new-booking" class="nav-link" data-tab="new-booking">New Booking</a>
+        <a href="#packages" class="nav-link" data-tab="packages">Packages</a>
+        <div class="nav-actions">
+            <button id="btnExportCsv" class="btn small">Export CSV</button>
+            <button id="btnRetryApi" class="btn small muted" title="Retry API">Retry API</button>
+        </div>
+    </div>
+</nav>
+
+<!-- App container -->
+<main class="container app-main" id="appMain">
+
+    <!-- Overlay: API unavailable -->
+    <div id="apiOverlay" class="overlay hidden">
+        <div class="overlay-card">
+            <h3>API Unavailable</h3>
+            <p>The backend API is not reachable. The UI will use local mock data until connection is restored.</p>
+            <div class="overlay-actions">
+                <button id="overlayRetry" class="btn">Retry</button>
+                <button id="overlayUseLocal" class="btn muted">Continue with local data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page: Customers -->
+    <section id="page-customers" class="page">
+        <div class="page-header">
+            <h2>Customers</h2>
+            <div class="page-controls">
+                <button id="openAddCustomer" class="btn">Add Customer</button>
+                <input id="searchCustomers" class="input search" placeholder="Search by name or email" />
+            </div>
+        </div>
+
+        <div id="customersEmpty" class="empty-state hidden">
+            <h3>No customers yet</h3>
+            <p>Create a customer to start adding bookings.</p>
+            <button id="ctaAddCustomer" class="btn">Create first customer</button>
+        </div>
+
+        <div id="customersTableWrap" class="table-wrap">
+            <table id="customersTable" class="table" role="table" aria-label="Customers table">
+                <thead>
+                <tr>
+                    <th data-sort="id">ID</th>
+                    <th data-sort="name">Name</th>
+                    <th data-sort="email">Email</th>
+                    <th data-sort="phone">Phone</th>
+                    <th>Passport</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="customersTBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Page: Bookings -->
+    <section id="page-bookings" class="page hidden">
+        <div class="page-header">
+            <h2>Bookings</h2>
+            <div class="page-controls">
+                <select id="filterByStatus" class="input">
+                    <option value="">All statuses</option>
+                    <option value="PENDING">PENDING</option>
+                    <option value="CONFIRMED">CONFIRMED</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                </select>
+                <select id="filterByType" class="input">
+                    <option value="">All types</option>
+                    <option value="FLIGHT">FLIGHT</option>
+                    <option value="HOTEL">HOTEL</option>
+                </select>
+                <input id="searchBookings" class="input search" placeholder="Search by customer, flight number, hotel" />
+            </div>
+        </div>
+
+        <div id="bookingsEmpty" class="empty-state hidden">
+            <h3>No bookings yet</h3>
+            <p>Create a booking from the New Booking page or add customers first.</p>
+            <button id="ctaNewBooking" class="btn">New Booking</button>
+        </div>
+
+        <div class="table-wrap">
+            <table id="bookingsTable" class="table" role="table" aria-label="Bookings table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Details</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="bookingsTBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Page: New Booking -->
+    <section id="page-new-booking" class="page hidden">
+        <div class="page-header">
+            <h2>New Booking</h2>
+            <div class="page-controls">
+                <select id="globalCustomerSelect" class="input customer-select">
+                    <option value="">Select customer...</option>
+                </select>
+                <button id="btnFocusCustomer" class="btn small muted">Focus</button>
+            </div>
+        </div>
+
+        <div class="forms-grid">
+            <form id="formFlight" class="card form-card">
+                <h3>Flight Booking</h3>
+                <div class="field">
+                    <label for="flightCustomer">Customer</label>
+                    <select id="flightCustomer" class="input customer-select" required></select>
+                </div>
+                <div class="field two-grid">
+                    <div>
+                        <label for="flightDate">Booking date</label>
+                        <input id="flightDate" type="date" class="input" required />
+                    </div>
+                    <div>
+                        <label for="flightNumber">Flight number</label>
+                        <input id="flightNumber" class="input" required />
+                    </div>
+                </div>
+                <div class="field two-grid">
+                    <div>
+                        <label for="flightOrigin">Origin</label>
+                        <input id="flightOrigin" class="input" required />
+                    </div>
+                    <div>
+                        <label for="flightDestination">Destination</label>
+                        <input id="flightDestination" class="input" required />
+                    </div>
+                </div>
+                <div class="field two-grid">
+                    <div>
+                        <label for="flightClass">Seat class</label>
+                        <select id="flightClass" class="input">
+                            <option value="ECONOMY">ECONOMY</option>
+                            <option value="BUSINESS">BUSINESS</option>
+                            <option value="FIRST_CLASS">FIRST_CLASS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="flightPrice">Total price</label>
+                        <input id="flightPrice" type="number" step="0.01" class="input" required />
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn">Create Flight (PENDING)</button>
+                </div>
+            </form>
+
+            <form id="formHotel" class="card form-card">
+                <h3>Hotel Booking</h3>
+                <div class="field">
+                    <label for="hotelCustomer">Customer</label>
+                    <select id="hotelCustomer" class="input customer-select" required></select>
+                </div>
+                <div class="field two-grid">
+                    <div>
+                        <label for="hotelDate">Check-in</label>
+                        <input id="hotelDate" type="date" class="input" required />
+                    </div>
+                    <div>
+                        <label for="hotelNights">Nights</label>
+                        <input id="hotelNights" type="number" min="1" class="input" value="1" required />
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="hotelName">Hotel name</label>
+                    <input id="hotelName" class="input" required />
+                </div>
+                <div class="field two-grid">
+                    <div>
+                        <label for="hotelRoomType">Room type</label>
+                        <select id="hotelRoomType" class="input">
+                            <option value="STANDARD">STANDARD</option>
+                            <option value="DELUXE">DELUXE</option>
+                            <option value="SUITE">SUITE</option>
+                            <option value="PRESIDENTIAL">PRESIDENTIAL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="hotelPrice">Total price</label>
+                        <input id="hotelPrice" type="number" step="0.01" class="input" required />
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn">Create Hotel (PENDING)</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Page: Packages (read-only summary) -->
+    <section id="page-packages" class="page hidden">
+        <div class="page-header">
+            <h2>Packages</h2>
+            <div class="page-controls">
+                <button id="btnNewPackage" class="btn muted">Create package (future)</button>
+            </div>
+        </div>
+
+        <div id="packagesGrid" class="packages-grid"></div>
+    </section>
+
+</main>
+
+<!-- Add / Edit Customer modal -->
+<div id="modalCustomer" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalCustomerTitle">
+    <div class="modal-card">
+        <h3 id="modalCustomerTitle">Add customer</h3>
+        <form id="modalCustomerForm">
+            <input type="hidden" id="modalCustomerId">
+            <div class="field">
+                <label for="modalName">Full name</label>
+                <input id="modalName" class="input" required />
+            </div>
+            <div class="field">
+                <label for="modalEmail">Email</label>
+                <input id="modalEmail" class="input" type="email" required />
+            </div>
+            <div class="field two-grid">
+                <div>
+                    <label for="modalPhone">Phone</label>
+                    <input id="modalPhone" class="input" required />
+                </div>
+                <div>
+                    <label for="modalPassport">Passport number</label>
+                    <input id="modalPassport" class="input" required />
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="modalCancel" class="btn muted">Cancel</button>
+                <button type="submit" id="modalSave" class="btn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<script src="script.js" type="module"></script>
+</body>
+</html>
